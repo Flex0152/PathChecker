@@ -15,7 +15,7 @@ param(
     [int]$ThrottleLimit = [Environment]::ProcessorCount,
     
     [Parameter(Mandatory=$false)]
-    [int]$BatchSize = 1000
+    [int]$BatchSize = 5000
 )
 
 function Write-Progress-Safe {
@@ -71,11 +71,10 @@ function Test-PathLengths {
             # ScriptBlock für die parallele Verarbeitung
             $scriptBlock = {
                 param($items, $maxLen)
-                $results = @()
-                foreach ($item in $items) {
+                $results = foreach ($item in $items) {
                     $pathLength = $item.FullName.Length
                     if ($pathLength -gt $maxLen) {
-                        $results += [PSCustomObject]@{
+                        [PSCustomObject]@{
                             Path = $item.FullName
                             Length = $pathLength
                             Excess = $pathLength - $maxLen

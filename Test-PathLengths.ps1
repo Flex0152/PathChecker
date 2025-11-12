@@ -193,7 +193,7 @@ if ($UseParallel) {
 # Prüfung starten
 $startTime = Get-Date
 $results = Test-PathLengths -RootPath $Path -MaxLength $MaxLength -UseParallel $UseParallel -ThrottleLimit $ThrottleLimit -BatchSize $BatchSize
-Write-Host "$results" -ForegroundColor Yellow
+if ( $results.Length -gt 0 ) { $results | Out-GridView }
 
 # Ergebnisse anzeigen
 $endTime = Get-Date
@@ -209,11 +209,8 @@ if ($results -eq $null) {
     Write-Host "Gefunden: $(($results | Measure-Object).Count) Pfade, die länger als $MaxLength Zeichen sind" -ForegroundColor Yellow
     Write-Host ""
     
-    # Sortierte Anzeige der längsten Pfade
-    $sortedResults = $results | Sort-Object Length -Descending
-    
     # Statistiken
-    $maxLength = ($sortedResults | Measure-Object -Property Length -Maximum).Maximum
+    $maxLength = ($results | Measure-Object -Property Length -Maximum).Maximum
     
     Write-Host "Statistiken der zu langen Pfade:" -ForegroundColor Cyan
     Write-Host "  Längster Pfad: $maxLength Zeichen" -ForegroundColor White

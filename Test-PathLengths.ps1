@@ -102,9 +102,9 @@ function Test-PathLengths {
                     Handle = $pwsh.BeginInvoke()
                 }
 
-                while ($runspaces.Handle.IsCompleted -contains $false){
-                    Start-Sleep -Milliseconds 500
-                }
+                # while ($runspaces.Handle.IsCompleted -contains $false){
+                #     Start-Sleep -Milliseconds 500
+                # }
                 
                 $processedCount += $batch.Count
                 $percentComplete = if ($total -gt 0) { [math]::Round(($processedCount / $total) * 100, 1) } else { 0 }
@@ -147,7 +147,6 @@ function Test-PathLengths {
                 
                 if ($pathLength -gt $MaxLength) {
                     $longPaths += [PSCustomObject]@{
-                        Type = "Ordner"
                         Path = $currentPath
                         Length = $pathLength
                         Excess = $pathLength - $MaxLength
@@ -193,7 +192,6 @@ if ($UseParallel) {
 # Prüfung starten
 $startTime = Get-Date
 $results = Test-PathLengths -RootPath $Path -MaxLength $MaxLength -UseParallel $UseParallel -ThrottleLimit $ThrottleLimit -BatchSize $BatchSize
-if ( $results.Length -gt 0 ) { $results | Out-GridView }
 
 # Ergebnisse anzeigen
 $endTime = Get-Date
@@ -208,13 +206,14 @@ if ($results -eq $null) {
 } else {
     Write-Host "Gefunden: $(($results | Measure-Object).Count) Pfade, die länger als $MaxLength Zeichen sind" -ForegroundColor Yellow
     Write-Host ""
+
+    if ( $results.Length -gt 50 ) { $results | Out-GridView } else { $results }
     
     # Statistiken
     $maxLength = ($results | Measure-Object -Property Length -Maximum).Maximum
     
     Write-Host "Statistiken der zu langen Pfade:" -ForegroundColor Cyan
     Write-Host "  Längster Pfad: $maxLength Zeichen" -ForegroundColor White
-    Write-Host "  Ordner: $(($results | Where-Object Type -eq 'Ordner' | Measure-Object).Count)" -ForegroundColor White
 }
 
 # Optional: Ergebnisse in Datei speichern

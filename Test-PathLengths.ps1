@@ -29,6 +29,48 @@ function Write-Progress-Safe {
     }
 }
 
+function Get-AllFileSystemEntriesIterative {
+    param([string]$RootPath)
+
+    $stack = New-Object System.Collections.Stack
+    $stack.Push($RootPath)
+
+    while($stack.Count -gt 0) {
+        $current = $stack.Pop()
+        try {
+            foreach ($entry in [System.IO.Directory]::EnumerateFileSystemEntries($current)){
+                $entry
+                if ([System.IO.Directory]::Exists($entry)) {
+                    $stack.Push($entry)
+                }
+            }
+        }
+        catch [System.UnauthorizedAccessException] {
+            Write-Verbose "Kein Zugriff auf $current"
+        }
+        catch {
+            Write-Verbose "Fehler bei $current : $($_.Exception.Message)"
+        }
+    }
+}
+
+function AllEntries {
+    param (
+        [string]$path
+    )
+    $dirs = [System.Collections.Generic.List[string]]::new()
+    if ($PSVersionTable.psversion.major -gt 5){
+        Write-Verbose "Zähle Objekte mit PowerShell 7 Methode ..."
+        $options = [System.IO.EnumerationOptions]::new()
+        $options.IgnoreInaccessible = $true
+        $options.RecurseSubdirectories = $true
+        $dirs = [System.IO.Directory]::EnumerateFileSystemEntries($path, '*', $options)
+    } else {
+        Write-Verbose "Zähle Objekte mit PowerShell 5 Methode ..."
+        $dirs = Get-AllFileSystemEntriesIterative -RootPath $path
+    }
+    return $dirs
+}
 function Test-PathLengths {
     param(
         [string]$RootPath,
@@ -53,10 +95,9 @@ function Test-PathLengths {
     
     try {
         # Erste Zählung für Progress-Anzeige
-        Write-Host "Zähle Objekte..." -ForegroundColor Yellow
         $total = 0
         
-        $totalItems = Get-ChildItem -Path $RootPath -Recurse -Force -ErrorAction SilentlyContinue
+        $totalItems = AllEntries -path $RootPath
         $total = ($totalItems | Measure-Object).Count
         
         Write-Host "Gefunden: $total Objekte zum Prüfen" -ForegroundColor Yellow
@@ -64,7 +105,6 @@ function Test-PathLengths {
 
         if ($UseParallel) {
             # Parallele Verarbeitung
-            Write-Host "Verwende parallele Verarbeitung..." -ForegroundColor Magenta
             $pool = [runspacefactory]::CreateRunspacePool(1, $ThrottleLimit)
             $pool.Open()
             
@@ -72,10 +112,10 @@ function Test-PathLengths {
             $scriptBlock = {
                 param($items, $maxLen)
                 $results = foreach ($item in $items) {
-                    $pathLength = $item.FullName.Length
+                    $pathLength = $item.Length
                     if ($pathLength -gt $maxLen) {
                         [PSCustomObject]@{
-                            Path = $item.FullName
+                            Path = $item
                             Length = $pathLength
                             Excess = $pathLength - $maxLen
                         }
@@ -129,7 +169,7 @@ function Test-PathLengths {
             Write-Host "Prüfe Items..." -ForegroundColor Cyan
             $totalItems | ForEach-Object {
                 $processedCount++
-                $currentPath = $_.FullName
+                $currentPath = $_
                 $pathLength = $currentPath.Length
                 
                 # Progress alle 100 Objekte aktualisieren
@@ -141,7 +181,7 @@ function Test-PathLengths {
                     Write-Progress-Safe -Activity "Prüfe Pfadlängen" `
                         -Status "$processedCount von $total Objekten geprüft ($percentComplete%)" `
                         -PercentComplete $percentComplete `
-                        -CurrentOperation "Aktuell: $($_.Name) | Rate: $rate Obj/s"
+                        -CurrentOperation "Aktuell: $($_) | Rate: $rate Obj/s"
                 }
                 
                 if ($pathLength -gt $MaxLength) {
@@ -189,12 +229,13 @@ if ($UseParallel) {
 }
 
 # Prüfung starten
-$startTime = Get-Date
+$stopwatch = [System.Diagnostics.Stopwatch]::new()
+$stopwatch.start()
 $results = Test-PathLengths -RootPath $Path -MaxLength $MaxLength -UseParallel $UseParallel -ThrottleLimit $ThrottleLimit -BatchSize $BatchSize
 
 # Ergebnisse anzeigen
-$endTime = Get-Date
-$duration = $endTime - $startTime
+$stopwatch.Stop()
+$duration = $stopwatch.Elapsed
 
 Write-Host ""
 Write-Host "=== ERGEBNISSE ===" -ForegroundColor Magenta

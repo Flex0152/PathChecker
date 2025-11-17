@@ -18,7 +18,7 @@ param(
     [int]$BatchSize = 5000
 )
 
-Import-Module .\allDirectories.psm1
+Import-Module .\AllDirectories
 
 function Write-Progress-Safe {
     param($Activity, $Status, $PercentComplete, $CurrentOperation)
@@ -56,7 +56,7 @@ function Test-PathLengths {
         # Erste Zählung für Progress-Anzeige
         $total = 0
         
-        $totalItems = AllEntries -path $RootPath -IgnoreInaccessible -RecurseSubdirectories
+        $totalItems = Get-AllEntries -path $RootPath -IgnoreInaccessible -RecurseSubdirectories
         $total = ($totalItems | Measure-Object).Count
         
         Write-Host "Gefunden: $total Objekte zum Prüfen" -ForegroundColor Yellow

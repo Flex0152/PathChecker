@@ -12,7 +12,7 @@
     CompatiblePSEditions = @('Desktop', 'Core')
 
     # --- Dateien & Ressourcen ---
-    CmdletsToExport = @('Get-AllFileSystemEntriesIterative', 'Get-AllEntries') 
+    FunctionsToExport = @('Get-AllFileSystemEntriesIterative', 'Get-AllEntries') 
 
     # --- Private Daten ---
     PrivateData       = @{

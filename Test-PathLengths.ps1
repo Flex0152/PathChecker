@@ -18,6 +18,8 @@ param(
     [int]$BatchSize = 5000
 )
 
+Import-Module .\allDirectories.psm1
+
 function Write-Progress-Safe {
     param($Activity, $Status, $PercentComplete, $CurrentOperation)
     try {
@@ -27,49 +29,6 @@ function Write-Progress-Safe {
         # Fallback wenn Write-Progress nicht verfügbar ist
         Write-Host "$Activity - $Status - $CurrentOperation"
     }
-}
-
-function Get-AllFileSystemEntriesIterative {
-    param([string]$RootPath)
-
-    $stack = New-Object System.Collections.Stack
-    $stack.Push($RootPath)
-
-    while($stack.Count -gt 0) {
-        $current = $stack.Pop()
-        try {
-            foreach ($entry in [System.IO.Directory]::EnumerateFileSystemEntries($current)){
-                $entry
-                if ([System.IO.Directory]::Exists($entry)) {
-                    $stack.Push($entry)
-                }
-            }
-        }
-        catch [System.UnauthorizedAccessException] {
-            Write-Verbose "Kein Zugriff auf $current"
-        }
-        catch {
-            Write-Verbose "Fehler bei $current : $($_.Exception.Message)"
-        }
-    }
-}
-
-function AllEntries {
-    param (
-        [string]$path
-    )
-    $dirs = [System.Collections.Generic.List[string]]::new()
-    if ($PSVersionTable.psversion.major -gt 5){
-        Write-Verbose "Zähle Objekte mit PowerShell 7 Methode ..."
-        $options = [System.IO.EnumerationOptions]::new()
-        $options.IgnoreInaccessible = $true
-        $options.RecurseSubdirectories = $true
-        $dirs = [System.IO.Directory]::EnumerateFileSystemEntries($path, '*', $options)
-    } else {
-        Write-Verbose "Zähle Objekte mit PowerShell 5 Methode ..."
-        $dirs = Get-AllFileSystemEntriesIterative -RootPath $path
-    }
-    return $dirs
 }
 function Test-PathLengths {
     param(
@@ -97,7 +56,7 @@ function Test-PathLengths {
         # Erste Zählung für Progress-Anzeige
         $total = 0
         
-        $totalItems = AllEntries -path $RootPath
+        $totalItems = AllEntries -path $RootPath -IgnoreInaccessible -RecurseSubdirectories
         $total = ($totalItems | Measure-Object).Count
         
         Write-Host "Gefunden: $total Objekte zum Prüfen" -ForegroundColor Yellow

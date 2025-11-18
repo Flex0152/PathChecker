@@ -56,4 +56,4 @@ If > 50 paths, a separate grid view window opens for easier navigation.
 
 ### :page_facing_up: License
 ---
-This Project is released under the MIT [./License].
+This Project is released under the MIT [License](./LICENSE).

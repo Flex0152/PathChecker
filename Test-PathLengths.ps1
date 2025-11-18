@@ -265,7 +265,14 @@ if ($null -eq $results) {
     Write-Host "Found: $(($results | Measure-Object).Count) Paths, that are longer than $MaxLength characters" -ForegroundColor Yellow
     Write-Host ""
 
-    if ( $results.Length -gt 50 ) { $results | Out-GridView } else { $results }
+    if ( $results.Length -gt 50 ) { 
+        $results | Out-GridView 
+    } else { 
+        $results | Format-Table `
+            @{Label="Path"; Expression={$_.Path}; Width=80}, 
+            Length,
+            Excess
+    }
     
     # Statistiken
     $maxLength = ($results | Measure-Object -Property Length -Maximum).Maximum

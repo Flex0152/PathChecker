@@ -18,7 +18,66 @@ param(
     [int]$BatchSize = 5000
 )
 
-Import-Module .\AllDirectories
+<#
+.SYNOPSIS
+Ein Pfadlängen Checker, zum prüfen der Pfade auf maximal Länge.
+
+.DESCRIPTION
+Dieses Skript prüft die Länge von Pfaden unterhalb eines angegebenen Root-Pfads. 
+Alle vollqualifizierten Pfade werden ermittelt und auf ihre Länge überprüft. 
+Überschreitet ein Pfad die definierte maximale Länge, wird er in die Auswertung aufgenommen.
+
+Das Skript unterstützt:
+- **Parallelverarbeitung**: Mit dem Parameter `ThrottleLimit` kann die Anzahl der Threads festgelegt werden.
+- **Batch-Verarbeitung**: Um das System nicht zu überlasten, werden Pfade in Batches geprüft.
+- **CSV-Export**: Ergebnisse können über den Parameter `OutputFile` als CSV-Datei gespeichert werden.
+
+Ausgabe:
+- Standardmäßig erfolgt die Ausgabe in der Shell.
+- Bis zu 50 gefundene Pfade werden direkt angezeigt.
+- Bei mehr als 50 Pfaden öffnet sich ein separates Fenster zur Darstellung.
+
+.VERSION 
+1.0
+
+.DATE 
+18.11.2025
+
+.PARAMETER <Path>
+Beschreibt den zu untersuchenden Pfad. 
+
+.PARAMETER <MaxLength>
+Beschreibt die maximale Zeichenlänge der vollqualifizierten Pfade.  
+
+.PARAMETER <OutputFile>
+Hier kann ein CSV Pfad angegeben werden um das Ergebnis zu exportieren. 
+
+.PARAMETER <UseParallel>
+Bei angabe des Parameters wird der Pfad parallel Bearbeitet.
+
+.PARAMETER <ThrottleLimit>
+Beschreibt die maximale Anzahl der Threads. Nur mit dem Parameter UseParallel sinnvoll.
+
+.PARAMETER <BatchSize>
+Beschreibt die maximale Anzahl der gleichzeitig untersuchenden Pfade. 
+
+.EXAMPLE
+Prüft den Pfad c:\temp sequenziell und gibt das Ergebnis auf der Shell aus.
+Test-PathLengths.ps1 -Path C:\temp\ -MaxLength 140
+
+Prüft den Pfad c:\temp parallel und gibt das Ergebnis auf der Shell aus.
+Test-PathLengths.ps1 -Path c:\temp -MaxLength 140 -UseParallel
+
+Prüft den Pfad c:\temp sequenziell und speichert das Ergebnis als CSV im angegebenen Pfad. 
+Test-PathLengths.ps1 -Path C:\temp\ -MaxLength 140 -OutputFile c:\temp\result.csv
+#>
+
+if (Test-Path .\AllDirectories){
+    Import-Module .\AllDirectories
+} else {
+    Write-Host "The module was not found. Please download the application again."
+    return 
+}
 
 function Write-Progress-Safe {
     param($Activity, $Status, $PercentComplete, $CurrentOperation)
@@ -200,7 +259,7 @@ Write-Host ""
 Write-Host "=== RESULTS ===" -ForegroundColor Magenta
 Write-Host "Processing time: $($duration.TotalSeconds.ToString('F2')) Seconds" -ForegroundColor Green
 
-if ($results -eq $null) {
+if ($null -eq $results) {
     Write-Host "No path found longer than $MaxLength characters." -ForegroundColor Green
 } else {
     Write-Host "Found: $(($results | Measure-Object).Count) Paths, that are longer than $MaxLength characters" -ForegroundColor Yellow

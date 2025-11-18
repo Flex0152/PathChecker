@@ -43,12 +43,12 @@ function Test-PathLengths {
     $processedCount = 0
     $startTime = Get-Date
     
-    Write-Host "Starte Pfadlängen-Prüfung für: $RootPath" -ForegroundColor Green
-    Write-Host "Maximale Pfadlänge: $MaxLength Zeichen" -ForegroundColor Green
-    Write-Host "Parallele Verarbeitung: $UseParallel" -ForegroundColor Green
+    Write-Host "Starts Path Length Check for: $RootPath" -ForegroundColor Green
+    Write-Host "Maximum Path Length: $MaxLength Character" -ForegroundColor Green
+    Write-Host "Parallel Processing: $UseParallel" -ForegroundColor Green
     if ($UseParallel) {
         Write-Host "Parallel-Threads: $ThrottleLimit" -ForegroundColor Green
-        Write-Host "Batch-Größe: $BatchSize" -ForegroundColor Green
+        Write-Host "Batch-Size: $BatchSize" -ForegroundColor Green
     }
     Write-Host ""
     
@@ -59,7 +59,7 @@ function Test-PathLengths {
         $totalItems = Get-AllEntries -path $RootPath -IgnoreInaccessible -RecurseSubdirectories
         $total = ($totalItems | Measure-Object).Count
         
-        Write-Host "Gefunden: $total Objekte zum Prüfen" -ForegroundColor Yellow
+        Write-Host "Found: $total objects to check" -ForegroundColor Yellow
         Write-Host ""
 
         if ($UseParallel) {
@@ -83,7 +83,7 @@ function Test-PathLengths {
                 return $results
             }
             
-            Write-Host "Verarbeite Items parallel..." -ForegroundColor Cyan
+            Write-Host "Process items in parallel..." -ForegroundColor Cyan
 
             $runspaces = @()
             # In Batches aufteilen
@@ -106,7 +106,7 @@ function Test-PathLengths {
                 
                 $processedCount += $batch.Count
                 $percentComplete = if ($total -gt 0) { [math]::Round(($processedCount / $total) * 100, 1) } else { 0 }
-                Write-Progress-Safe -Activity "Parallele Verarbeitung" -Status "Verarbeitet: $processedCount/$totalItems ($percentComplete%)" -PercentComplete $percentComplete
+                Write-Progress-Safe -Activity "Parallel Processing" -Status "Processed: $processedCount/$totalItems ($percentComplete%)" -PercentComplete $percentComplete
             }
         
             $longPaths = @()
@@ -115,7 +115,7 @@ function Test-PathLengths {
                     $output = $rs.PowerShell.EndInvoke($rs.Handle)
                     $longPaths += $output
                 }catch{
-                    "Hier ist was schief gelaufen"
+                    Write-Host "An error occurred during processing. $($_.Exception.Message)"
                 }
                 finally{
                     $rs.PowerShell.Dispose()
@@ -125,7 +125,7 @@ function Test-PathLengths {
             $pool.Dispose()
 
         } else { 
-            Write-Host "Prüfe Items..." -ForegroundColor Cyan
+            Write-Host "Check Items..." -ForegroundColor Cyan
             $totalItems | ForEach-Object {
                 $processedCount++
                 $currentPath = $_
@@ -137,10 +137,10 @@ function Test-PathLengths {
                     $elapsed = (Get-Date) - $startTime
                     $rate = if ($elapsed.TotalSeconds -gt 0) { [math]::Round($processedCount / $elapsed.TotalSeconds, 0) } else { 0 }
                     
-                    Write-Progress-Safe -Activity "Prüfe Pfadlängen" `
-                        -Status "$processedCount von $total Objekten geprüft ($percentComplete%)" `
+                    Write-Progress-Safe -Activity "Check path length" `
+                        -Status "$processedCount out of $total Items checked ($percentComplete%)" `
                         -PercentComplete $percentComplete `
-                        -CurrentOperation "Aktuell: $($_) | Rate: $rate Obj/s"
+                        -CurrentOperation "Current: $($_) | Rate: $rate Obj/s"
                 }
                 
                 if ($pathLength -gt $MaxLength) {
@@ -154,10 +154,10 @@ function Test-PathLengths {
         }
     }
     catch {
-        Write-Host "Fehler beim Durchsuchen: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Error while browsing: $($_.Exception.Message)" -ForegroundColor Red
     }
     finally {
-        Write-Progress -Activity "Prüfe Pfadlängen" -Completed
+        Write-Progress -Activity "Check Path length" -Completed
     }
     return $longPaths
 }
@@ -165,25 +165,25 @@ function Test-PathLengths {
 
 # Hauptprogramm
 Clear-Host
-Write-Host "=== Windows Pfadlängen-Prüfer ===" -ForegroundColor Magenta
+Write-Host "=== Windows Path Length Checker ===" -ForegroundColor Magenta
 Write-Host ""
 
 # Parameter validieren
 if (-not (Test-Path $Path)) {
-    Write-Host "FEHLER: Der angegebene Pfad existiert nicht: $Path" -ForegroundColor Red
+    Write-Host "ERROR: Path not found: $Path" -ForegroundColor Red
     exit 1
 }
 
 if ($MaxLength -lt 1) {
-    Write-Host "FEHLER: MaxLength muss größer als 0 sein" -ForegroundColor Red
+    Write-Host "ERROR: MaxLength muss größer als 0 sein" -ForegroundColor Red
     exit 1
 }
 
 if ($UseParallel) {
-    Write-Host "Empfehlung: Parallele Verarbeitung ist ideal für:" -ForegroundColor Cyan
-    Write-Host "  - Verzeichnisse mit >10.000 Objekten" -ForegroundColor White
-    Write-Host "  - Systeme mit mehreren CPU-Kernen" -ForegroundColor White
-    Write-Host "  - Langsame Speichermedien (Netzwerklaufwerke)" -ForegroundColor White
+    Write-Host "Recommendation: Parallel processing is ideal for:" -ForegroundColor Cyan
+    Write-Host "  - Folders with >10.000 Objects" -ForegroundColor White
+    Write-Host "  - Systems with multiple CPU cores" -ForegroundColor White
+    Write-Host "  - Slow storage media (network drives)" -ForegroundColor White
     Write-Host ""
 }
 
@@ -197,13 +197,13 @@ $stopwatch.Stop()
 $duration = $stopwatch.Elapsed
 
 Write-Host ""
-Write-Host "=== ERGEBNISSE ===" -ForegroundColor Magenta
-Write-Host "Verarbeitungszeit: $($duration.TotalSeconds.ToString('F2')) Sekunden" -ForegroundColor Green
+Write-Host "=== RESULTS ===" -ForegroundColor Magenta
+Write-Host "Processing time: $($duration.TotalSeconds.ToString('F2')) Seconds" -ForegroundColor Green
 
 if ($results -eq $null) {
-    Write-Host "Keine Pfade gefunden, die länger als $MaxLength Zeichen sind." -ForegroundColor Green
+    Write-Host "No path found longer than $MaxLength characters." -ForegroundColor Green
 } else {
-    Write-Host "Gefunden: $(($results | Measure-Object).Count) Pfade, die länger als $MaxLength Zeichen sind" -ForegroundColor Yellow
+    Write-Host "Found: $(($results | Measure-Object).Count) Paths, that are longer than $MaxLength characters" -ForegroundColor Yellow
     Write-Host ""
 
     if ( $results.Length -gt 50 ) { $results | Out-GridView } else { $results }
@@ -211,8 +211,8 @@ if ($results -eq $null) {
     # Statistiken
     $maxLength = ($results | Measure-Object -Property Length -Maximum).Maximum
     
-    Write-Host "Statistiken der zu langen Pfade:" -ForegroundColor Cyan
-    Write-Host "  Längster Pfad: $maxLength Zeichen" -ForegroundColor White
+    Write-Host "Statistics on excessively long paths:" -ForegroundColor Cyan
+    Write-Host "  Longest path: $maxLength character" -ForegroundColor White
 }
 
 # Optional: Ergebnisse in Datei speichern
@@ -220,12 +220,13 @@ if ($OutputFile -ne "") {
     try {
         $results | Export-Csv -Path $OutputFile -NoTypeInformation -Encoding UTF8
         Write-Host ""
-        Write-Host "Ergebnisse gespeichert in: $OutputFile" -ForegroundColor Green
+        Write-Host "Result saved in: $OutputFile" -ForegroundColor Green
     }
     catch {
-        Write-Host "Fehler beim Speichern der Datei: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Error while saving the file: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
 Write-Host ""
-Write-Host "Prüfung abgeschlossen." -ForegroundColor Green
+Write-Host "Check completed." -ForegroundColor Green
+Write-Host ""
